@@ -1,18 +1,10 @@
-import java.util.concurrent.Semaphore;
-
 public class CarThread extends Thread {
     private String name;
     private int gateNO;
     private int arrivalTime;
     private long waitingTime = 0;
     private int parkingTime;
-    private static Sema spots = new Sema(4);
-
-
-
-    public int getArrivalTime(){
-        return arrivalTime;
-    }
+    private static Semaphore spots = new Semaphore(4);
 
     public CarThread(String name, int gateNO, int arrivalTime, int parkingTime) {
         this.name = name;
@@ -22,42 +14,52 @@ public class CarThread extends Thread {
         this.parkingTime = parkingTime;
     }
 
-
-    public void carArrival(){
-        System.out.println(name + " from Gate " + gateNO + " arrived at time " + arrivalTime );
+    public int getArrivalTime() {
+        return arrivalTime;
     }
 
-    public void waitTime(){
-        System.out.println(name + " from Gate " + this.gateNO + " waiting for a spot");
+    public void carArrival() {
+        synchronized (System.out) {
+            System.out.println(name + " from Gate " + gateNO + " arrived at time " + arrivalTime);
+        }
+    }
+
+    public void waitTime() {
         long startTime = System.currentTimeMillis();
-        while (spots.availablePermits() == 0);
+        spots.acquire();
         long endTime = System.currentTimeMillis();
         this.waitingTime = endTime - startTime;
+
+        synchronized (System.out) {
+            System.out.println(name + " from Gate " + this.gateNO + " waited for " + this.waitingTime + " milliseconds");
+        }
     }
 
-    public void carParking() throws InterruptedException {
-        boolean isWaiting = false;
-        while (spots.isBusy()) {
-            isWaiting = true;
+    public synchronized void carParking() throws InterruptedException {
+        if (spots.isBusy()) {
             waitTime();
-            System.out.println(name + " from Gate " + this.gateNO + " parked after " + this.waitingTime + " milliseconds");
+            synchronized (System.out) {
+                System.out.println(name + " from Gate " + this.gateNO + " parked after waiting" + " for a spot");
+            }
+        } else {
+            spots.acquire();
+            Thread.sleep(parkingTime);
+        }
+        synchronized (System.out) {
+            System.out.println(" Parking Status: " + (4 - spots.availablePermits().get()) + " spots occupied");
         }
 
-        if(!isWaiting){
-            System.out.print(name + " from Gate " + this.gateNO + " parked");
-        }
-        System.out.println(" Parking Status: " + spots.availablePermits() + " spots occupied");
-        spots.acquire();
-        Thread.sleep(parkingTime);
     }
 
-    public void carLeaving() throws InterruptedException {
-        System.out.print(name + " from Gate " + this.gateNO + " left after " + this.parkingTime + " milliseconds");
-        System.out.println(" Parking Status: " + spots.availablePermits() + " spots occupied");
+    public synchronized void carLeaving() throws InterruptedException {
         spots.release();
+        synchronized (System.out) {
+            System.out.println(name + " from Gate " + this.gateNO + " left after " + this.parkingTime + " milliseconds");
+            System.out.println(" Parking Status: " + (4 - spots.availablePermits().get()) + " spots occupied");
+        }
     }
 
-    public void run(){
+    public void run() {
         carArrival();
         try {
             carParking();
@@ -70,5 +72,4 @@ public class CarThread extends Thread {
             throw new RuntimeException(e);
         }
     }
-
 }
