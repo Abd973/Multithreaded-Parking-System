@@ -41,7 +41,9 @@ public class Semaphore {
                 wait();
             }
             long endTime = System.currentTimeMillis();
-            car.setWaitingTime(endTime - startTime);
+            double time = (double) (endTime - startTime) /1000;
+            time = Math.ceil(time);
+            car.setWaitingTime((long) time);
 
             occupiedSpots++;
             carsQueue.poll();
