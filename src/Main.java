@@ -32,7 +32,6 @@ public class Main {
 //        }
         for (CarThread carThread : carThreads) {
             carThread.start();
-            Thread.sleep(1);
         }
 
         //carThreads.forEach(carThread -> carThread.start());
